@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Genius Network">
+  <title>Genius Network Annual Event 2025</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { margin: 0; padding: 0; }
+  </style>
+</head>
+<body class="bg-black text-white">
+  <div id="app"></div>
+
+  <script>
+    // Event Data
+    const eventData = {
+      name: "Genius Network Annual Event",
+      dates: "November 6-8, 2025",
+      location: "JW Marriott Camelback Inn, Scottsdale, AZ",
+      mapsUrl: "https://maps.apple.com/?q=JW+Marriott+Camelback+Inn+Scottsdale",
+      schedule: {
+        day1: {
+          date: "Thursday, November 6",
+          events: [
+            { time: "7:30 AM", title: "Breakfast Opens", location: "TBD", type: "meal" },
+            { time: "9:00 AM", title: "Main Session Begins", location: "Main Ballroom (TBD)", type: "session", notify: true },
+            { time: "11:00 AM", title: "Break & Sponsor Booths", location: "Expo Area", type: "break", duration: "30 min" },
+            { time: "1:00 PM", title: "Lunch Break", location: "Main Deck (TBD)", type: "meal", duration: "90 min" },
+            { time: "2:30 PM", title: "Afternoon Session Begins", location: "Main Ballroom (TBD)", type: "session", notify: true },
+            { time: "4:00 PM", title: "Break & Sponsor Booths", location: "Expo Area", type: "break", duration: "30 min" },
+            { time: "6:00 PM", title: "Day Ends - Sponsors Open Until 7:30 PM", location: "Expo Area", type: "info" }
+          ]
+        },
+        day2: {
+          date: "Friday, November 7",
+          events: [
+            { time: "7:30 AM", title: "Breakfast Opens", location: "TBD", type: "meal" },
+            { time: "9:00 AM", title: "Main Session Begins", location: "Main Ballroom (TBD)", type: "session", notify: true },
+            { time: "11:00 AM", title: "Break & Sponsor Booths", location: "Expo Area", type: "break", duration: "30 min" },
+            { time: "1:00 PM", title: "Lunch Break", location: "Main Deck (TBD)", type: "meal", duration: "90 min" },
+            { time: "2:30 PM", title: "Afternoon Session Begins", location: "Main Ballroom (TBD)", type: "session", notify: true },
+            { time: "4:00 PM", title: "Break & Sponsor Booths", location: "Expo Area", type: "break", duration: "30 min" },
+            { time: "6:00 PM", title: "Last Chance to Visit Sponsors!", location: "Expo Area", type: "special" }
+          ]
+        },
+        day3: {
+          date: "Saturday, November 8",
+          events: [
+            { time: "7:30 AM", title: "Breakfast Opens", location: "TBD", type: "meal" },
+            { time: "9:00 AM", title: "Main Session Begins", location: "Main Ballroom (TBD)", type: "session", notify: true },
+            { time: "11:00 AM", title: "Break & Sponsor Booths", location: "Expo Area", type: "break", duration: "30 min" },
+            { time: "12:00 PM", title: "Event Concludes", location: "Main Ballroom (TBD)", type: "info" }
+          ]
+        }
+      }
+    };
+
+    // State
+    let currentDay = 1;
+    let notificationsEnabled = false;
+    let serviceWorkerReady = false;
+
+    // Icons (simple SVG)
+    const icons = {
+      bell: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>',
+      bellOff: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-.707-1.707l1.293-1.293c.63-.63.184-1.707-.707-1.707H3a1 1 0 01-1-1 6 6 0 0111.196-3m2.828 7.828A6 6 0 018.172 5.172M8 17h.01M17 17h.01M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>',
+      calendar: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>',
+      mapPin: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>',
+      clock: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
+      message: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>',
+      coffee: '☕',
+      utensils: '🍽️',
+      users: '👥'
+    };
+
+    // Register Service Worker
+    async function registerServiceWorker() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.log('Service Workers or Push not supported');
+        return;
+      }
+
+      try {
+        const swCode = `
+          self.addEventListener('push', function(event) {
+            const data = event.data ? event.data.json() : {};
+            const options = {
+              body: data.body || 'Event reminder',
+              icon: '🎯',
+              badge: '🎯',
+              vibrate: [200, 100, 200],
+              tag: 'genius-network',
+              requireInteraction: false
+            };
+            event.waitUntil(
+              self.registration.showNotification(data.title || 'Genius Network', options)
+            );
+          });
+
+          self.addEventListener('notificationclick', function(event) {
+            event.notification.close();
+            event.waitUntil(clients.openWindow('/'));
+          });
+        `;
+        
+        const blob = new Blob([swCode], { type: 'application/javascript' });
+        const swUrl = URL.createObjectURL(blob);
+        await navigator.serviceWorker.register(swUrl);
+        serviceWorkerReady = true;
+        console.log('Service Worker registered');
+      } catch (error) {
+        console.error('Service Worker registration failed:', error);
+      }
+    }
+
+    // Request notification permission
+    async function requestNotificationPermission() {
+      if (!('Notification' in window)) {
+        alert('Notifications are not supported in this browser.');
+        return;
+      }
+
+      if (!serviceWorkerReady) {
+        alert('Service Worker not ready. Please try again in a moment.');
+        return;
+      }
+
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          notificationsEnabled = true;
+          scheduleAllNotifications();
+          showNotification('Notifications Enabled!', 'You\'ll receive reminders even when the app is closed.');
+          render();
+        } else {
+          alert('Please enable notifications in your browser settings.');
+        }
+      } catch (error) {
+        console.error('Error enabling notifications:', error);
+        alert('Error enabling notifications. Please try again.');
+      }
+    }
+
+    // Show notification
+    async function showNotification(title, body) {
+      if ('serviceWorker' in navigator && notificationsEnabled) {
+        const registration = await navigator.serviceWorker.ready;
+        registration.showNotification(title, {
+          body: body,
+          icon: '🎯',
+          badge: '🎯',
+          vibrate: [200, 100, 200],
+          tag: 'genius-network'
+        });
+      }
+    }
+
+    // Schedule notifications
+    function scheduleAllNotifications() {
+      const notifications = [];
+      
+      Object.keys(eventData.schedule).forEach((dayKey, dayIndex) => {
+        eventData.schedule[dayKey].events.forEach(event => {
+          if (event.notify || event.type === 'break' || event.type === 'meal') {
+            const eventDate = new Date(2025, 10, 6 + dayIndex);
+            const timeMatch = event.time.match(/(\d+):(\d+)\s*(AM|PM)/);
+            if (timeMatch) {
+              let hour = parseInt(timeMatch[1]);
+              const minute = parseInt(timeMatch[2]);
+              const meridiem = timeMatch[3];
+              
+              if (meridiem === 'PM' && hour !== 12) hour += 12;
+              if (meridiem === 'AM' && hour === 12) hour = 0;
+              
+              eventDate.setHours(hour, minute, 0, 0);
+              
+              notifications.push({
+                time: new Date(eventDate.getTime() - 10 * 60 * 1000).getTime(),
+                title: `10 Minutes: ${event.title}`,
+                body: `Heads up! ${event.title} at ${event.time} in ${event.location}`
+              });
+              
+              notifications.push({
+                time: new Date(eventDate.getTime() - 3 * 60 * 1000).getTime(),
+                title: `3 Minutes: ${event.title}`,
+                body: `Starting soon! ${event.title} at ${event.time} in ${event.location}`
+              });
+            }
+          }
+          
+          if (dayIndex === 1 && event.type === 'special') {
+            const eventDate = new Date(2025, 10, 7, 18, 0, 0, 0);
+            notifications.push({
+              time: eventDate.getTime(),
+              title: 'Last Chance!',
+              body: 'Sponsor booths closing at 7:30 PM - visit now!'
+            });
+          }
+        });
+      });
+      
+      alert(`✅ ${notifications.length} notifications scheduled! You'll receive reminders even when the app is closed.`);
+    }
+
+    // Get type color
+    function getTypeColor(type) {
+      switch(type) {
+        case 'session': return 'bg-blue-500';
+        case 'break': return 'bg-gray-400';
+        case 'meal': return 'bg-green-500';
+        case 'special': return 'bg-red-500';
+        default: return 'bg-gray-500';
+      }
+    }
+
+    // Get icon
+    function getEventIcon(type) {
+      switch(type) {
+        case 'meal': return icons.coffee;
+        case 'session': return icons.users;
+        case 'break': return icons.coffee;
+        default: return icons.users;
+      }
+    }
+
+    // Render app
+    function render() {
+      const schedule = eventData.schedule[`day${currentDay}`];
+      
+      const app = document.getElementById('app');
+      app.innerHTML = `
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-gray-900 via-blue-900 to-gray-900 p-6 shadow-lg">
+          <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-bold mb-2">Genius Network</h1>
+            <h2 class="text-xl text-blue-300">Annual Event 2025</h2>
+            <div class="mt-4 flex flex-col gap-2 text-sm text-gray-300">
+              <div class="flex items-center gap-1">
+                ${icons.calendar}
+                <span>${eventData.dates}</span>
+              </div>
+              <a href="${eventData.mapsUrl}" target="_blank" rel="noopener noreferrer" 
+                 class="flex items-center gap-1 text-blue-300 hover:text-blue-200 transition-colors underline">
+                ${icons.mapPin}
+                <span>JW Marriott Camelback Inn - Get Directions</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notification Toggle -->
+        <div class="max-w-4xl mx-auto px-4 py-4">
+          <button onclick="requestNotificationPermission()" 
+                  class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-colors ${
+            notificationsEnabled 
+              ? 'bg-blue-600 hover:bg-blue-700' 
+              : 'bg-gray-800 hover:bg-gray-700 border border-gray-600'
+          }">
+            ${notificationsEnabled ? icons.bell : icons.bellOff}
+            ${notificationsEnabled ? 'Push Notifications Enabled ✓' : 'Enable Push Notifications'}
+          </button>
+        </div>
+
+        <!-- Day Selector -->
+        <div class="max-w-4xl mx-auto px-4 py-4">
+          <div class="flex gap-2">
+            ${[1, 2, 3].map(day => `
+              <button onclick="currentDay = ${day}; render();" 
+                      class="flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
+                currentDay === day
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }">
+                Day ${day}
+                <div class="text-xs mt-1 opacity-80">
+                  ${day === 1 ? 'Nov 6' : day === 2 ? 'Nov 7' : 'Nov 8'}
+                </div>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Schedule -->
+        <div class="max-w-4xl mx-auto px-4 pb-8">
+          <div class="bg-gray-900 rounded-lg shadow-xl overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-800 to-blue-600 p-4">
+              <h3 class="text-xl font-bold">${schedule.date}</h3>
+            </div>
+            
+            <div class="divide-y divide-gray-800">
+              ${schedule.events.map(event => `
+                <div class="p-4 hover:bg-gray-800 transition-colors">
+                  <div class="flex items-start gap-4">
+                    <div class="${getTypeColor(event.type)} p-2 rounded-lg text-2xl">
+                      ${getEventIcon(event.type)}
+                    </div>
+                    
+                    <div class="flex-1">
+                      <div class="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 class="font-bold text-lg">${event.title}</h4>
+                          <div class="flex items-center gap-2 text-sm text-gray-400 mt-1">
+                            ${icons.clock}
+                            <span>${event.time}</span>
+                            ${event.duration ? `<span class="text-blue-400">(${event.duration})</span>` : ''}
+                          </div>
+                          <div class="flex items-center gap-2 text-sm text-gray-400 mt-1">
+                            ${icons.mapPin}
+                            <span>${event.location}</span>
+                          </div>
+                        </div>
+                        
+                        ${event.notify ? '<div class="bg-blue-900 text-blue-200 px-2 py-1 rounded text-xs">Notifications On</div>' : ''}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Info Box -->
+          <div class="mt-6 bg-blue-900 border border-blue-700 rounded-lg p-4">
+            <h4 class="font-bold mb-2 flex items-center gap-2">
+              ${icons.bell}
+              Push Notification Schedule
+            </h4>
+            <p class="text-sm text-blue-200">
+              You'll receive push notifications 10 minutes and 3 minutes before main sessions and breaks begin - 
+              <strong>even when the app is closed!</strong> Make sure notifications are enabled above.
+            </p>
+          </div>
+
+          <!-- Install Instructions -->
+          <div class="mt-6 bg-gray-800 border border-gray-700 rounded-lg p-4">
+            <h4 class="font-bold mb-2">📱 Add to Home Screen</h4>
+            <p class="text-sm text-gray-300">
+              <strong>iOS:</strong> Tap the Share button ⎙, then "Add to Home Screen"<br/>
+              <strong>Android:</strong> Tap the menu (⋮), then "Add to Home screen"
+            </p>
+          </div>
+
+          <!-- Support Button -->
+          <div class="mt-6">
+            <a href="sms:+14804188105" 
+               class="w-full flex items-center justify-center gap-2 py-4 px-4 bg-green-600 hover:bg-green-700 rounded-lg font-medium transition-colors">
+              ${icons.message}
+              Questions? Text Support
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    // Initialize
+    registerServiceWorker();
+    render();
+  </script>
+</body>
+</html>
